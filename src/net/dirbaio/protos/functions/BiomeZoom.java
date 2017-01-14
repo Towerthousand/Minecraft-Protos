@@ -8,47 +8,55 @@ public class BiomeZoom extends BiomeFunction
     {
         this.base = base;
     }
-    
+
     @Override
     public int[] getBiomeData(int px, int pz, int sx, int sz)
     {
-        int px2 = px >> 1;
-        int pz2 = pz >> 1;
-        int sx2 = (sx >> 1) + 3;
-        int sz2 = (sz >> 1) + 3;
-        int[] data2 = base.getBiomeData(px2, pz2, sx2, sz2);
-        int[] data = ArrayCache.newInt(sx2 * 2 * sz2 * 2);
-        int var11 = sx2 << 1;
-        int var13;
+        int baseX = px >> 1;
+        int baseZ = pz >> 1;
+        int baseSizeX = (sx >> 1) + 3;
+        int baseSizeZ = (sz >> 1) + 3;
+        int zoomedSizeX = baseSizeX * 2;
+        int zoomedSizeZ = baseSizeZ * 2;
+        int[] baseData = base.getBiomeData(baseX, baseZ, baseSizeX, baseSizeZ);
+        int[] zoomedData = ArrayCache.newInt(zoomedSizeX * zoomedSizeZ);
 
-        for (int z = 0; z < sz2 - 1; ++z)
+        for (int z = 0; z < baseSizeZ - 1; ++z)
         {
-            var13 = z << 1;
-            int var14 = var13 * var11;
-            int var15 = data2[0 + (z + 0) * sx2];
-            int var16 = data2[0 + (z + 1) * sx2];
+            int currZoomedZ = (z << 1) * zoomedSizeX;
+            int topleft = baseData[0 + (z + 0) * baseSizeX]; //baseData[z][0]
+            int bottomleft = baseData[0 + (z + 1) * baseSizeX]; //baseData[z+1][0]
 
-            for (int x = 0; x < sx2 - 1; ++x)
+            for (int x = 0; x < baseSizeX - 1; ++x)
             {
-                int var18 = data2[x + 1 + (z + 0) * sx2];
-                int var19 = data2[x + 1 + (z + 1) * sx2];
-                data[var14] = var15;
-                data[var14++ + var11] = this.choose(var15, var16, x + px2 << 1, z + pz2 << 1, 0);
-                data[var14] = this.choose(var15, var18, x + px2 << 1, z + pz2 << 1, 1);
-                data[var14++ + var11] = this.modeOrRandom(var15, var18, var16, var19, x + px2 << 1, z + pz2 << 1, 2);
-                var15 = var18;
-                var16 = var19;
+                int topright = baseData[x + 1 + (z + 0) * baseSizeX]; //baseData[z][x+1]
+                int bottomright = baseData[x + 1 + (z + 1) * baseSizeX]; //baseData[z+1][x+1]
+                // Set topleft corner
+                zoomedData[currZoomedZ] = topleft;
+                // Set bottomleft corner
+                zoomedData[currZoomedZ++ + zoomedSizeX] = this.choose(topleft, bottomleft, x + baseX, z + baseZ, 0);
+                // Set topright corner
+                zoomedData[currZoomedZ] = this.choose(topleft, topright, x + baseX, z + baseZ, 1);
+                // Set bottomRight corner
+                zoomedData[currZoomedZ++ + zoomedSizeX] = this.modeOrRandom(topleft, topright, bottomleft, bottomright, x + baseX, z + baseZ, 2);
+                topleft = topright;
+                bottomleft = bottomright;
             }
         }
 
-        int[] var20 = ArrayCache.newInt(sx * sz);
+        int[] result = ArrayCache.newInt(sx * sz);
 
-        for (var13 = 0; var13 < sz; ++var13)
-        {
-            System.arraycopy(data, (var13 + (pz & 1)) * (sx2 << 1) + (px & 1), var20, var13 * sx, sx);
+        for (int z = 0; z < sz; ++z) {
+            System.arraycopy(
+                zoomedData,
+                (z + (pz & 1)) * (baseSizeX << 1) + (px & 1),
+                result,
+                z * sx,
+                sx
+            );
         }
 
-        return var20;
+        return result;
     }
 
     /**
